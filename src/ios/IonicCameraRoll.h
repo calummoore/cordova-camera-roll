@@ -7,6 +7,7 @@
 {}
 
 - (void)getPhotos:(CDVInvokedUrlCommand*)command;
+- (void)getPhotoByLocalIdentifier:(CDVInvokedUrlCommand*)command;
 - (void)saveToCameraRoll:(CDVInvokedUrlCommand*)command;
 
 @end
