@@ -53,27 +53,19 @@
     // Run a background job
     [self.commandDelegate runInBackground:^{
         
-        //Enforce options.offset
-        __block int i = 0;
+        long int offset = [[command.arguments objectAtIndex:3] integerValue];
+        long int limit = [[command.arguments objectAtIndex:2] integerValue];
+        long int limitOffset = limit + offset;
         
         PHFetchOptions *options = [[PHFetchOptions alloc] init];
-        options.fetchLimit = [[command.arguments objectAtIndex:2] integerValue];
+        options.fetchLimit = limitOffset;
         options.sortDescriptors = @[ [NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO] ];
         PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsWithOptions:options];
         
         
-        [assetsFetchResult enumerateObjectsUsingBlock:^(PHAsset *result, NSUInteger index, BOOL *stop){
+        [assetsFetchResult enumerateObjectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(offset, limit)] options:0 usingBlock:^(PHAsset *result, NSUInteger index, BOOL *stop){
             
-            NSLog(@"Image: %lu", index);
-            
-            //Enforce options.offset
-            if(i >= [[command.arguments objectAtIndex:3] integerValue]){
-                
-                [self sendPluginResult:result forCommand:command];
-                
-            }
-            
-            i = i+1;
+            [self sendPluginResult:result forCommand:command];
             
         }];
         
@@ -115,7 +107,8 @@
     }
     
     PHImageRequestOptions *imageOptions = [[PHImageRequestOptions alloc] init];
-    [imageOptions setSynchronous:true];
+    imageOptions.synchronous = true;
+    imageOptions.resizeMode = PHImageRequestOptionsResizeModeFast;
     
     [library requestImageForAsset:result
                        targetSize:size
