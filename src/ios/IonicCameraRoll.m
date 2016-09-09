@@ -62,6 +62,14 @@
         options.sortDescriptors = @[ [NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO] ];
         PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsWithOptions:options];
         
+        if(offset > assetsFetchResult.count){
+            [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:false] callbackId:command.callbackId];
+            return;
+        }
+        
+        if(limitOffset > assetsFetchResult.count){
+            limit = assetsFetchResult.count;
+        }
         
         [assetsFetchResult enumerateObjectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(offset, limit)] options:0 usingBlock:^(PHAsset *result, NSUInteger index, BOOL *stop){
             
