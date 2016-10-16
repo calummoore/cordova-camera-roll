@@ -53,12 +53,14 @@
     // Run a background job
     [self.commandDelegate runInBackground:^{
         
+        //Enforce options.offset
+        __block int i = 0;
         long int offset = [[command.arguments objectAtIndex:3] integerValue];
         long int limit = [[command.arguments objectAtIndex:2] integerValue];
         long int limitOffset = limit + offset;
         
         PHFetchOptions *options = [[PHFetchOptions alloc] init];
-        options.fetchLimit = limitOffset;
+        options.fetchLimit = [[command.arguments objectAtIndex:2] integerValue];
         options.sortDescriptors = @[ [NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO] ];
         PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsWithOptions:options];
         
@@ -71,9 +73,19 @@
             limit = assetsFetchResult.count;
         }
         
-        [assetsFetchResult enumerateObjectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(offset, limit)] options:0 usingBlock:^(PHAsset *result, NSUInteger index, BOOL *stop){
+        
+        [assetsFetchResult enumerateObjectsUsingBlock:^(PHAsset *result, NSUInteger index, BOOL *stop){
             
-            [self sendPluginResult:result forCommand:command];
+            NSLog(@"Image: %lu", index);
+            
+            //Enforce options.offset
+            if(i >= [[command.arguments objectAtIndex:3] integerValue]){
+                
+                [self sendPluginResult:result forCommand:command atIndex:index];
+                
+            }
+            
+            i = i+1;
             
         }];
         
@@ -89,14 +101,14 @@
         PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsWithLocalIdentifiers:@[[command.arguments objectAtIndex:2]] options:nil];
         PHAsset* result = [assetsFetchResult firstObject];
         
-        [self sendPluginResult:result forCommand:command];
+        [self sendPluginResult:result forCommand:command atIndex: 0];
         
     }];
     
 }
 
 
--(void)sendPluginResult:(PHAsset *)result forCommand:(CDVInvokedUrlCommand*)command
+-(void)sendPluginResult:(PHAsset *)result forCommand:(CDVInvokedUrlCommand*)command atIndex:(NSUInteger)index
 {
     
     PHImageManager *library = [IonicCameraRoll defaultAssetsLibrary];
@@ -115,8 +127,7 @@
     }
     
     PHImageRequestOptions *imageOptions = [[PHImageRequestOptions alloc] init];
-    imageOptions.synchronous = true;
-    imageOptions.resizeMode = PHImageRequestOptionsResizeModeFast;
+    [imageOptions setSynchronous:true];
     
     [library requestImageForAsset:result
                        targetSize:size
@@ -128,7 +139,8 @@
                         NSString *filePath = [self tempFilePath:@"png" withIdentifier:[localIdentifier substringWithRange:NSMakeRange(0, 32)] ];
                         NSDictionary *resp = @{
                                                @"localIdentifier": localIdentifier,
-                                               @"url":[[NSURL fileURLWithPath:filePath] absoluteString]
+                                               @"url":[[NSURL fileURLWithPath:filePath] absoluteString],
+                                               @"index": [NSNumber numberWithUnsignedInteger:index]
                                                };
                         
                         NSData *data = UIImagePNGRepresentation(image);
